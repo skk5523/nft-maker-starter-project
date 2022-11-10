@@ -15,7 +15,8 @@ const NftUploader = () => {
   const [currentAccount, setCurrentAccount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOnGoerli, setIsOnGoerli] = useState(false);
-
+  const [isUploading, setIsUploading] = useState(false);
+  
   /*この段階でcurrentAccountの中身は空*/
   console.log("currentAccount: ", currentAccount);
 
@@ -100,6 +101,7 @@ const NftUploader = () => {
   };
 
   const imageToNFT = async (e) => {
+    // const API_KEY = process.env.WEB3STORAGE_API_KEY;
     const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweGQyOTgxOWQ0YTlDNUM4ZDM4ZjVFRUMzYTU3MzBFRUFDODAxNDVCYjMiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NjU3MTQxNTUzNjUsIm5hbWUiOiJFVEgtTkZULU1ha2VyIn0.Xv5q_vAIxVPQGaAVMi76gigp0zpCaOsSZVdWmH4Ior8";
     const client = new Web3Storage({ token: API_KEY })
     const image = e.target
@@ -109,8 +111,10 @@ const NftUploader = () => {
         name: 'experiment',
         maxRetries: 3
     })
+    setIsUploading(true);
     const res = await client.get(rootCid) // Web3Response
     const files = await res.files() // Web3File[]
+    setIsUploading(false);
     for (const file of files) {
       console.log("file.cid:",file.cid)
       askContractToMintNft(file.cid)
@@ -125,25 +129,26 @@ const NftUploader = () => {
   
   const renderSwitchNetwork = () => (
     <p className="text-warning">Please switch to Goerli network!</p>
-    );
-    
-    const renderImageUploader = () => (
-      <>
-        <p>JpegかPngの画像ファイル</p>
-        <div className="nftUplodeBox">
-          <div className="imageLogoAndText">
-            <img src={ImageLogo} alt="imagelogo" />
-            <p>ここにドラッグ＆ドロップしてね</p>
-          </div>
-          <input className="nftUploadInput" multiple name="imageURL" type="file" accept=".jpg , .jpeg , .png" onChange={imageToNFT} />
+  );
+  
+  const renderImageUploader = () => (
+    <>
+      <p>JpegかPngの画像ファイル</p>
+      <div className="nftUplodeBox">
+        <div className="imageLogoAndText">
+          <img src={ImageLogo} alt="imagelogo" />
+          <p>ここにドラッグ＆ドロップしてね</p>
         </div>
-        <p>または</p>
-        <Button variant="contained">
-          ファイルを選択
-          <input className="nftUploadInput" type="file" accept=".jpg , .jpeg , .png" onChange={imageToNFT} />
-        </Button>
-      </>
-    );
+        <input className="nftUploadInput" multiple name="imageURL" type="file" accept=".jpg , .jpeg , .png" onChange={imageToNFT} />
+      </div>
+      <p>または</p>
+      <Button variant="contained">
+        ファイルを選択
+        <input className="nftUploadInput" type="file" accept=".jpg , .jpeg , .png" onChange={imageToNFT} />
+      </Button>
+      {isUploading ? <p>Uploading your image file...</p> : <p></p>}
+    </>
+  );
 
   /*
   * ページがロードされたときに useEffect()内の関数が呼び出されます。
@@ -166,13 +171,18 @@ const NftUploader = () => {
 
     if (!connectedContract || !isOnGoerli) return;
 
-  }, [currentAccount, isOnGoerli]);
+  });
+
+  useEffect(() => {
+    renderImageUploader();
+    renderSwitchNetwork();
+  }, [isUploading, isOnGoerli]);
 
   return (
     <div className="outerBox">
       <div className="title">
         <h2>NFTアップローダー</h2>
-      <p>If you choose image, you can mint your NFT</p>
+        <p>If you choose image, you can mint your NFT</p>
       </div>
       {currentAccount === "" ? (
         renderNotConnectedContainer()
