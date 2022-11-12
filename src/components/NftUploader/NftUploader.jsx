@@ -14,6 +14,7 @@ import { NFTStorage } from 'nft.storage'
 import mime from 'mime'
 // // Paste your NFT.Storage API key into the quotes:
 const NFT_STORAGE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDkwODlGQ2NmMThkOTg2MzU0QzBjY0Q1RmFDMGRGZkY3NDVkY2Y4MEIiLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTY2ODE3MjE5MTAyOSwibmFtZSI6IkVUSC1ORlQtTWFrZXIifQ.yXF1xDOkicuDkxHg54nCb9eMFi4D6xPHo-DsGk67T6E'
+const CONTRACT_ADDRESS = "0xF89f9e5688fD8A87Ef26Ce2f32EF3E102Ee3290d";
 
 const NftUploader = () => {
   /*
@@ -24,6 +25,7 @@ const NftUploader = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isImageReceived, setIsImageReceived] = useState(false);
   const [isMintingInProgress, setIsMintingInProgress] = useState(false);
+  const [tokenCounter, setTokenCounter] = useState("");
 
   /*この段階でcurrentAccountの中身は空*/
   // console.log("currentAccount: ", currentAccount);
@@ -72,6 +74,12 @@ const NftUploader = () => {
        * ウォレットアドレスを currentAccount に紐付けます。
        */
       setCurrentAccount(accounts[0]);
+
+      let chainId = await ethereum.request({ method: "eth_chainId" });
+      // console.log("Connected to chain " + chainId);
+      // 0x5 は Goerli の ID です。
+      const goerliChainId = "0x5";
+      setIsOnGoerli(chainId === goerliChainId);
     } catch (error) {
       console.log(error);
     }
@@ -90,15 +98,34 @@ const NftUploader = () => {
       // 0x5 は Goerli の ID です。
       const goerliChainId = "0x5";
       setIsOnGoerli(chainId === goerliChainId);
-      
+
     } catch (error) {
       console.log(error);
-    }  
-  };  
+    }
+  };
+
+  const setCurrentTokenId = async () => {
+    try {
+      const { ethereum } = window;
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const connectedContract = new ethers.Contract(
+          CONTRACT_ADDRESS,
+          Web3Mint.abi,
+          signer
+        );
+        setTokenCounter((await connectedContract.getCurrentTokenId()).toString());
+      } else {
+        console.log("Ethereum object doesn't exist!");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const askContractToMintNft = async (ipfs) => {
-    const CONTRACT_ADDRESS =
-    "0xccDb12DDadcF8218c4dda0beeD960985eA21CA8E";
+    // "0xccDb12DDadcF8218c4dda0beeD960985eA21CA8E";
     try {
       const { ethereum } = window;
       if (ethereum) {
@@ -119,23 +146,22 @@ const NftUploader = () => {
           `Mined, see transaction: https://goerli.etherscan.io/tx/${nftTxn.hash}`
         );
         setIsImageReceived(false);
+        setCurrentTokenId((await connectedContract.getCurrentTokenId()).toString());
       } else {
         console.log("Ethereum object doesn't exist!");
       }
     } catch (error) {
       console.log(error);
     }
-  }; 
-  
-  const renderNotConnectedContainer = () => (
-    <button onClick={connectWallet} className="connectWalletButton">
-      Connect to Wallet
-    </button>
-  );
+  };
   
   const renderPrePage = () => (
     <>
-      {currentAccount === "" && renderNotConnectedContainer()}
+      {currentAccount === "" && (
+        <button onClick={connectWallet} className="connectWalletButton">
+          Connect to Wallet
+        </button>
+      )}
       {currentAccount && !isOnGoerli && (
           <p>Please switch to the Goerli network!</p>
       )}
@@ -147,7 +173,11 @@ const NftUploader = () => {
     */
    useEffect(() => {
      checkIfWalletIsConnected();
-    }, []);
+   }, []);
+
+  useEffect(() => {
+    setCurrentTokenId();
+  }, [currentAccount]);
   
   const imageToNFT = async (e) => {
     setIsImageReceived(true);
@@ -170,6 +200,9 @@ const NftUploader = () => {
     <div className="outerBox">
       <div className="title">
         <h2>NFTアップローダー</h2>
+        {currentAccount && (
+          <p>NFTs minted so far: {tokenCounter}</p>
+        )}
       </div>
       {renderPrePage()}
       {currentAccount && isOnGoerli && !isImageReceived && !isUploading && (
