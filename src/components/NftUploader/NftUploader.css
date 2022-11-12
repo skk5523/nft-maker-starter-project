@@ -35,3 +35,13 @@
     height: 100%;
     cursor: pointer;
   }
+
+  .connectWalletButton {
+    cursor: pointer;
+    appearance: none;
+    border: 0;
+    border-radius: 5px;
+    background: #e8942e;
+    color: #fff;
+    padding: 8px 16px;
+  }
