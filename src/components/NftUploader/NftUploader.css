@@ -46,3 +46,14 @@
     color: #fff;
     padding: 8px 16px;
   }
+
+  .footer {
+    padding-top: 2rem;
+  }
+  .footer a{
+    font-weight:bold;
+    display: inline-block;
+    transition:.3s;
+    text-decoration: none;
+    color: #2d6395;
+  }

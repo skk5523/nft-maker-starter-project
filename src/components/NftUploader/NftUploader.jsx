@@ -6,15 +6,16 @@ import { useEffect, useState } from 'react'
 import ImageLogo from "./image.svg";
 import "./NftUploader.css";
 import Animation from "../Animation/Animation";
-// require('dotenv').config();
 
 // Import the NFTStorage class and File constructor from the 'nft.storage' package
 import { NFTStorage } from 'nft.storage'
 // The 'mime' npm package helps us set the correct file type on our File objects
 import mime from 'mime'
 // // Paste your NFT.Storage API key into the quotes:
-const NFT_STORAGE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDkwODlGQ2NmMThkOTg2MzU0QzBjY0Q1RmFDMGRGZkY3NDVkY2Y4MEIiLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTY2ODE3MjE5MTAyOSwibmFtZSI6IkVUSC1ORlQtTWFrZXIifQ.yXF1xDOkicuDkxHg54nCb9eMFi4D6xPHo-DsGk67T6E'
-const CONTRACT_ADDRESS = "0xF89f9e5688fD8A87Ef26Ce2f32EF3E102Ee3290d";
+const NFT_STORAGE_KEY = process.env.REACT_APP_NFT_STORAGE_KEY;
+const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
+
+const OPENSEA_LINK = "https://testnets.opensea.io/ja/collection/nft-rpo9amab3x";
 
 const NftUploader = () => {
   /*
@@ -84,25 +85,6 @@ const NftUploader = () => {
       console.log(error);
     }
   };
-  
-  const checkChainId = async () =>{
-    try {
-      const { ethereum } = window;
-      if (!ethereum) {
-        alert("Get MetaMask!");
-        return;
-      }
-
-      let chainId = await ethereum.request({ method: "eth_chainId" });
-      console.log("Connected to chain " + chainId);
-      // 0x5 は Goerli の ID です。
-      const goerliChainId = "0x5";
-      setIsOnGoerli(chainId === goerliChainId);
-
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   const setCurrentTokenId = async () => {
     try {
@@ -125,7 +107,6 @@ const NftUploader = () => {
   };
 
   const askContractToMintNft = async (ipfs) => {
-    // "0xccDb12DDadcF8218c4dda0beeD960985eA21CA8E";
     try {
       const { ethereum } = window;
       if (ethereum) {
@@ -173,6 +154,7 @@ const NftUploader = () => {
     */
    useEffect(() => {
      checkIfWalletIsConnected();
+    //  setCurrentTokenId();
    }, []);
 
   useEffect(() => {
@@ -200,7 +182,7 @@ const NftUploader = () => {
     <div className="outerBox">
       <div className="title">
         <h2>NFTアップローダー</h2>
-        {currentAccount && (
+        {currentAccount && isOnGoerli && (
           <p>NFTs minted so far: {tokenCounter}</p>
         )}
       </div>
@@ -231,6 +213,9 @@ const NftUploader = () => {
       {currentAccount && isMintingInProgress && (
         <Animation text="Minting..." />
       )}
+      <div className="footer">
+        <a href={OPENSEA_LINK}>See the collection</a>
+      </div>
     </div>
   );
 };
