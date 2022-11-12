@@ -1,25 +1,32 @@
 import { ethers } from "ethers";
+import Web3Mint from "../../utils/Web3Mint.json";
 import { Button } from "@mui/material";
 import React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 import ImageLogo from "./image.svg";
 import "./NftUploader.css";
-import Web3Mint from "../../utils/Web3Mint.json";
-import { Web3Storage } from "web3.storage";
+import { Web3Storage } from 'web3.storage'
+
+// require('dotenv').config();
+
+// Import the NFTStorage class and File constructor from the 'nft.storage' package
+import { NFTStorage, File } from 'nft.storage'
+// The 'mime' npm package helps us set the correct file type on our File objects
+import mime from 'mime'
+// The 'fs' builtin module on Node.js provides access to the file system
+// import fs from 'fs'
+// // The 'path' module provides helpers for manipulating filesystem paths
+// import path from 'path'
+// // Paste your NFT.Storage API key into the quotes:
+const NFT_STORAGE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDkwODlGQ2NmMThkOTg2MzU0QzBjY0Q1RmFDMGRGZkY3NDVkY2Y4MEIiLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTY2ODE3MjE5MTAyOSwibmFtZSI6IkVUSC1ORlQtTWFrZXIifQ.yXF1xDOkicuDkxHg54nCb9eMFi4D6xPHo-DsGk67T6E'
 
 const NftUploader = () => {
-  const CONTRACT_ADDRESS = "0xccDb12DDadcF8218c4dda0beeD960985eA21CA8E";
   /*
-  * ユーザーのウォレットアドレスを格納するために使用する状態変数を定義します。
-  */
+   * ユーザーのウォレットアドレスを格納するために使用する状態変数を定義します。
+   */
   const [currentAccount, setCurrentAccount] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isOnGoerli, setIsOnGoerli] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  
   /*この段階でcurrentAccountの中身は空*/
   console.log("currentAccount: ", currentAccount);
-
   const checkIfWalletIsConnected = async () => {
     const { ethereum } = window;
     if (!ethereum) {
@@ -28,8 +35,9 @@ const NftUploader = () => {
     } else {
       console.log("We have the ethereum object", ethereum);
     }
+
     const accounts = await ethereum.request({ method: "eth_accounts" });
-    
+
     if (accounts.length !== 0) {
       const account = accounts[0];
       console.log("Found an authorized account:", account);
@@ -37,18 +45,7 @@ const NftUploader = () => {
     } else {
       console.log("No authorized account found");
     }
-
-    let chainId = await ethereum.request({ method: "eth_chainId" });
-    console.log("Connected to chain " + chainId);
-    // 0x5 は Goerli の ID です。
-    const goerliChainId = "0x5";
-
-    setIsOnGoerli(chainId === goerliChainId);
-    // if (chainId !== goerliChainId) {
-    //   alert("You are not connected to the Goerli Test Network!");
-    // }
   };
-
   const connectWallet = async () =>{
     try {
       const { ethereum } = window;
@@ -73,6 +70,8 @@ const NftUploader = () => {
   };
 
   const askContractToMintNft = async (ipfs) => {
+    const CONTRACT_ADDRESS =
+      "0xccDb12DDadcF8218c4dda0beeD960985eA21CA8E";
     try {
       const { ethereum } = window;
       if (ethereum) {
@@ -86,9 +85,7 @@ const NftUploader = () => {
         console.log("Going to pop wallet now to pay gas...");
         let nftTxn = await connectedContract.mintIpfsNFT("sample",ipfs);
         console.log("Mining...please wait.");
-        setIsLoading(true);
         await nftTxn.wait();
-        setIsLoading(false);
         console.log(
           `Mined, see transaction: https://goerli.etherscan.io/tx/${nftTxn.hash}`
         );
@@ -100,103 +97,112 @@ const NftUploader = () => {
     }
   };
 
-  const imageToNFT = async (e) => {
-    // const API_KEY = process.env.WEB3STORAGE_API_KEY;
-    const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweGQyOTgxOWQ0YTlDNUM4ZDM4ZjVFRUMzYTU3MzBFRUFDODAxNDVCYjMiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NjU3MTQxNTUzNjUsIm5hbWUiOiJFVEgtTkZULU1ha2VyIn0.Xv5q_vAIxVPQGaAVMi76gigp0zpCaOsSZVdWmH4Ior8";
-    const client = new Web3Storage({ token: API_KEY })
-    const image = e.target
-    console.log(image)
+  /**
+    * Reads an image file from `imagePath` and stores an NFT with the given name and description.
+    * @param {string} imagePath the path to an image file
+    * @param {string} name a name for the NFT
+    * @param {string} description a text description for the NFT
+    */
+  const storeNFT = async (image) => {
+    // load the file from disk
+    // const image = await e.target;
 
-    const rootCid = await client.put(image.files, {
-        name: 'experiment',
-        maxRetries: 3
-    })
-    setIsUploading(true);
-    const res = await client.get(rootCid) // Web3Response
-    const files = await res.files() // Web3File[]
-    setIsUploading(false);
-    for (const file of files) {
-      console.log("file.cid:",file.cid)
-      askContractToMintNft(file.cid)
+    // create a new NFTStorage client using our API key
+    const nftstorage = new NFTStorage({ token: NFT_STORAGE_KEY })
+
+    // call client.store, passing in the image & metadata
+    return nftstorage.storeBlob(image);
+  };
+  
+  
+  function getAccessToken () {
+    // If you're just testing, you can paste in a token
+    // and uncomment the following line:
+    // return 'paste-your-token-here'
+
+    // In a real app, it's better to read an access token from an
+    // environement variable or other configuration that's kept outside of
+    // your code base. For this to work, you need to set the
+    // WEB3STORAGE_TOKEN environment variable before you run your code.
+    return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweGQyOTgxOWQ0YTlDNUM4ZDM4ZjVFRUMzYTU3MzBFRUFDODAxNDVCYjMiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NjgxNzEzMjYxNjMsIm5hbWUiOiJVTkNIQUlOLUVUSC1ORlQifQ.bsKIs0ZZ9SUE_De32fnU_3CmKh_qyMGAtSi6Ye2gZeA";
+  };
+  
+  function makeStorageClient () {
+    return new Web3Storage({ token: getAccessToken() })
+  };
+
+  async function checkStatus (cid) {
+    const client = makeStorageClient()
+    const status = await client.status(cid)
+    console.log(status)
+    if (status) {
+      // your code to do something fun with the status info here
     }
   };
-    
+  
   const renderNotConnectedContainer = () => (
     <button onClick={connectWallet} className="cta-button connect-wallet-button">
-      Connect to Wallet
-    </button>
-  );
+        Connect to Wallet
+      </button>
+    );
+  /*
+   * ページがロードされたときに useEffect()内の関数が呼び出されます。
+   */
+  useEffect(() => {
+    checkIfWalletIsConnected();
+  }, []);
+
+  const API_KEY = 
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweGQyOTgxOWQ0YTlDNUM4ZDM4ZjVFRUMzYTU3MzBFRUFDODAxNDVCYjMiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NjgxNzEzMjYxNjMsIm5hbWUiOiJVTkNIQUlOLUVUSC1ORlQifQ.bsKIs0ZZ9SUE_De32fnU_3CmKh_qyMGAtSi6Ye2gZeA";
+    // const client = new Web3Storage({ token: API_KEY })
   
-  const renderSwitchNetwork = () => (
-    <p className="text-warning">Please switch to Goerli network!</p>
-  );
-  
-  const renderImageUploader = () => (
-    <>
-      <p>JpegかPngの画像ファイル</p>
+  const imageToNFT = async (e) => {
+    const images = e.target.files;
+
+    // const imageFiles = image.files;
+
+    for (const image of images) {
+      const cid = await storeNFT(image);
+      console.log(cid);
+      askContractToMintNft(cid);
+    }
+   
+    // const rootCid = await client.put(image.files, {
+    //   name: 'experiment',
+    //   maxRetries: 3
+    // })
+
+    // checkStatus(rootCid);
+    // const res = await client.get(rootCid) // Web3Response
+    // const files = await res.files() // Web3File[]
+    // for (const file of files) {
+    //   console.log("file.cid:",file.cid)
+    //   askContractToMintNft(file.cid)
+    // }
+  }
+
+  return (
+    <div className="outerBox">
+      {currentAccount === "" ? (
+        renderNotConnectedContainer()
+      ) : (
+        <p>If you choose image, you can mint your NFT</p>
+      )}
+      <div className="title">
+        <h2>NFTアップローダー</h2>
+      </div>
       <div className="nftUplodeBox">
         <div className="imageLogoAndText">
           <img src={ImageLogo} alt="imagelogo" />
           <p>ここにドラッグ＆ドロップしてね</p>
         </div>
-        <input className="nftUploadInput" multiple name="imageURL" type="file" accept=".jpg , .jpeg , .png" onChange={imageToNFT} />
+        <input className="nftUploadInput" multiple name="imageURL" type="file" accept=".jpg , .jpeg , .png" onChange={imageToNFT}  />
       </div>
       <p>または</p>
       <Button variant="contained">
         ファイルを選択
         <input className="nftUploadInput" type="file" accept=".jpg , .jpeg , .png" onChange={imageToNFT} />
       </Button>
-      {isUploading ? <p>Uploading your image file...</p> : <p></p>}
-    </>
-  );
-
-  /*
-  * ページがロードされたときに useEffect()内の関数が呼び出されます。
-   */
-  useEffect(() => {
-    checkIfWalletIsConnected();
-  }, []);
-
-  useEffect(() => {
-    const { ethereum } = window;
-    if (!ethereum || !currentAccount) return;
-
-    const provider = new ethers.providers.Web3Provider(ethereum);
-    const signer = provider.getSigner();
-    const connectedContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      Web3Mint.abi,
-      signer
-    );
-
-    if (!connectedContract || !isOnGoerli) return;
-
-  });
-
-  useEffect(() => {
-    renderImageUploader();
-    renderSwitchNetwork();
-  }, [isUploading, isOnGoerli]);
-
-  return (
-    <div className="outerBox">
-      <div className="title">
-        <h2>NFTアップローダー</h2>
-        <p>If you choose image, you can mint your NFT</p>
-      </div>
-      {currentAccount === "" ? (
-        renderNotConnectedContainer()
-      ) : !isOnGoerli ? 
-        renderSwitchNetwork()
-        : (
-          <>
-          </>
-        ) &&
-        (!isLoading ? 
-          renderImageUploader() 
-          : <p>Minting...</p>)
-        }
-
     </div>
   );
 };
