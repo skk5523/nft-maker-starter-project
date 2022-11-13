@@ -153,6 +153,8 @@ const NftUploader = () => {
     * ページがロードされたときに useEffect()内の関数が呼び出されます。
     */
    useEffect(() => {
+    console.log(CONTRACT_ADDRESS);
+    console.log(NFT_STORAGE_KEY);
      checkIfWalletIsConnected();
     //  setCurrentTokenId();
    }, []);
